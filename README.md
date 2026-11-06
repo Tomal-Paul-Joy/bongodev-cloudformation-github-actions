@@ -472,6 +472,6 @@ To display an individual screenshot directly in this README, use a relative Mark
 
 ---
 
-**bongoDev — Learn. Practice. Prove you're ready.**
+**Completed the task finally **
 
-*Completed as an individual DevOps homework project.*
+
