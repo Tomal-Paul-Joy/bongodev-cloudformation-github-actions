@@ -4,7 +4,7 @@ Description: bongoDev classroom demo - Ubuntu 24.04 LTS + Nginx website with a n
 Parameters:
   Environment:
     Type: String
-    Default: dev
+    Default: test
     AllowedValues:
       - dev
       - test
