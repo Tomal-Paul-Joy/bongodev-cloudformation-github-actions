@@ -21,7 +21,7 @@ permissions:
 
 # Avoid two stack operations racing against each other.
 concurrency:
-  group: bongodev-cloudformation-dev
+  group: bongodev-cloudformation-test
   cancel-in-progress: false
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 30
 
     env:
-      STACK_NAME: bongodev-github-iac-dev
+      STACK_NAME: bongodev-github-iac-test
       AWS_REGION: ${{ vars.AWS_REGION }}
 
     steps:
@@ -67,7 +67,7 @@ jobs:
           aws cloudformation deploy \
             --template-file cloudformation.yaml \
             --stack-name "$STACK_NAME" \
-            --parameter-overrides Environment=dev \
+            --parameter-overrides Environment=test \
             --region "$AWS_REGION" \
             --no-fail-on-empty-changeset
 
