@@ -1,0 +1,87 @@
+
+# bongoDev homework: Git push -> GitHub Actions -> CloudFormation -> Ubuntu + Nginx
+# AWS access uses GitHub OIDC, NOT permanent AWS access keys.
+
+name: Deploy Ubuntu Nginx with CloudFormation
+
+'on':
+  push:
+    branches:
+      - main
+    paths:
+      - 'cloudformation.yaml'
+      - '.github/workflows/deploy.yml'
+
+  workflow_dispatch:
+
+# Minimum GitHub token permissions required for checkout and AWS OIDC.
+permissions:
+  id-token: write
+  contents: read
+
+# Avoid two stack operations racing against each other.
+concurrency:
+  group: bongodev-cloudformation-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Validate and deploy infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      STACK_NAME: bongodev-github-iac-dev
+      AWS_REGION: ${{ vars.AWS_REGION }}
+
+    steps:
+      # 1. Download repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Authenticate with AWS using GitHub OIDC
+      - name: Configure temporary AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: bongodev-iac-lab
+
+      # 3. Verify AWS identity
+      - name: Confirm AWS identity
+        run: |
+          aws sts get-caller-identity \
+            --query '{Account:Account,Arn:Arn}' \
+            --output json
+
+      # 4. Validate CloudFormation template
+      - name: Validate CloudFormation template
+        run: |
+          aws cloudformation validate-template \
+            --template-body file://cloudformation.yaml \
+            --region "$AWS_REGION"
+
+      # 5. Create or update AWS infrastructure
+      - name: Create or update CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+            --template-file cloudformation.yaml \
+            --stack-name "$STACK_NAME" \
+            --parameter-overrides Environment=dev \
+            --region "$AWS_REGION" \
+            --no-fail-on-empty-changeset
+
+      # 6. Display CloudFormation outputs
+      - name: Print website and infrastructure outputs
+        run: |
+          aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --region "$AWS_REGION" \
+            --query 'Stacks[0].Outputs[*].[OutputKey,OutputValue]' \
+            --output table
+
+      # 7. Completion message
+      - name: Lab completion message
+        run: |
+          echo 'The stack is deployed.'
+          echo 'EC2 User Data may need additional minutes to install Nginx.'
